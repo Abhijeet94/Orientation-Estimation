@@ -34,7 +34,12 @@ def getQuatFromRotationVector(rot):
 	return np.asarray([angleCosine, angleSine * (rot[0,0]/rotNorm), angleSine * (rot[1,0]/rotNorm), angleSine * (rot[2,0]/rotNorm)])
 
 def getRotationVectorFromQuat(q):
-	pass
+	# q is 4 X 1 quaternion
+	# return 3 X 1 rotation vector
+	mod_w = 2 * math.acos(q[0,0])
+	sin_alpha_w_by_2 = math.sin(mod_w/2)
+	const = mod_w / sin_alpha_w_by_2
+	return np.asarray([q[1,0] * const, q[2,0] * const, q[3,0] * const]).reshape(3, 1)
 
 def getQuatRotFromAngularVelocity(w, delta_t):
 	# Assuming w is 3 X 1
@@ -52,14 +57,38 @@ def calMeanOfAngularVelocity(Y):
 		result = result + y[4:7, 0]
 	return result/len(Y)
 
-def calMeanOfQuat(Y):
+def calMeanOfQuat(Y, startValue = None):
 	# Assuming Y is 7 X 1
 	# Quat is in the first four components
-	pass
+	# result is 4 X 1, [4 X 1]
+	# first representing the mean, the other last iteration e_i
+
+	if startValue == None:
+		startValue = np.asarray([0, 0, 0, 0]).reshape(4, 1)
+
+	prevQBar = startValue
+	n = 6
+	e_quat = [] * (2 * n)
+	e_vec = [] * (2 * n)
+
+	while True:
+		e_mean = np.zeros((3, 1))
+		for i in range(2 * n):
+			e_quat[i] = quatMultiply(Y[4:7, 0], quatInv(prevQBar))
+			e_vec[i] = getRotationVectorFromQuat(e_quat[i])
+			e_mean = e_mean + e_vec[i]
+		e_mean = e_mean / (2 * n * 1.0)
+		e_mean_quat = getQuatFromRotationVector(e_mean)
+		prevQBar = quatMultiply(e_mean_quat, prevQBar)
+
+		if(math.sqrt(e_mean[0, 0] ** 2 + e_mean[1, 0] ** 2 + e_mean[2, 0] ** 2) < 0.05):
+			break
+
+	return prevQBar, e_quat
 
 def getAccelQuatFromAccelData(x, y, z):
 	# return 4 X 1 numpy array
-	pass
+	return np.asarray([0, x, y, z])
 
 def UKF(gyroData, accelerometerData, timestamps):
 	'''
@@ -123,7 +152,7 @@ def UKF(gyroData, accelerometerData, timestamps):
 		# 3 X 1
 		w_bar = calMeanOfAngularVelocity(Y)
 		# 4 X 1, 4 X 1
-		q_bar, q_lastIter_e = calMeanOfQuat(Y)
+		q_bar, q_lastIter_e = calMeanOfQuat(Y, q_prevState)
 		# 7 X 1
 		Ymean_x_k_bar = getStateFromOriQuatAngvel(q_bar, w_bar)
 
@@ -186,7 +215,7 @@ def UKF(gyroData, accelerometerData, timestamps):
 		# 7 X 1
 		newStateEstimate_x_k = Ymean_x_k_bar + np.matmul(kalmanGain_K_k, innovation_v_k)
 		# 7 X 7
-		prevCovariance_P_km1 = Ycov_P_k_bar + (-1) * (np.matmul(np.matmul(kalmanGain_K_k, P_vv), np.transpose(kalmanGain_K_k)))
+		newCovariance_P_k = Ycov_P_k_bar + (-1) * (np.matmul(np.matmul(kalmanGain_K_k, P_vv), np.transpose(kalmanGain_K_k)))
 
 		###########################
 		### Accelerometer update ##
@@ -197,7 +226,7 @@ def UKF(gyroData, accelerometerData, timestamps):
 		# 3 X 1
 		w_bar = calMeanOfAngularVelocity(Y)
 		# 4 X 1, 4 X 1
-		q_bar, q_lastIter_e = calMeanOfQuat(Y)
+		q_bar, q_lastIter_e = calMeanOfQuat(Y, q_prevState)
 		# 7 X 1
 		Ymean_x_k_bar = getStateFromOriQuatAngvel(q_bar, w_bar)
 
