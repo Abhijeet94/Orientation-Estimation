@@ -7,6 +7,37 @@ from constants import *
 from plots import *
 from utils import *
 
+def quatAdd(a, b):
+	return np.add(a, b)
+
+def quatMultiply(a, b):
+	a = a.reshape(4, 1)
+	b = b.reshape(4, 1)
+
+	afirst = a[0, 0]
+	asecond = a[1:4, 0]
+
+	bfirst = b[0, 0]
+	bsecond = b[1:4, 0]
+
+	resFirst = afirst * bfirst - np.dot(asecond, bsecond)
+	resSecond = np.cross(asecond, bsecond) + afirst * bsecond + bfirst * asecond
+	return np.insert(resSecond, 0, resFirst).reshape(4, 1)
+
+def quatConjugate(q):
+	a = np.copy(q).reshape(4, 1)
+	a[1, 0] = -1 * a[1, 0]
+	a[2, 0] = -1 * a[2, 0]
+	a[3, 0] = -1 * a[3, 0]
+	return a
+
+def quatNorm(q):
+	q = q.reshape(4, 1)
+	return math.sqrt(q[0, 0] ** 2 + q[1, 0] ** 2 + q[2, 0] ** 2 + q[3, 0] ** 2)
+
+def quatInv(q):
+	return quatConjugate(q) / (quatNorm(q) ** 2)
+
 def getOriQuatAngvelFromState(state):
 	# Assuming state is a 7 X 1 vector
 	quat = state[0:4, 0]
