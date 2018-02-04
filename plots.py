@@ -127,27 +127,23 @@ def plotGTruthAndPredictions(viconFile, predictions, predTimestamps):
 		pred_roll_pitch_yaw[1, i] = p
 		pred_roll_pitch_yaw[2, i] = y
 
-	k = 0 # First index that matches - assumed that the others will match in sequence
-	lastDiff = abs(viconTs[0, 0] - predTimestamps[0, k])
-	# Assuming there will be no index out of range
-	while abs(viconTs[0, 0] - predTimestamps[0, k + 1]) < lastDiff:
-		lastDiff = abs(viconTs[0, 0] - predTimestamps[0, k])
-		k = k + 1
+	gt, pt = getSynchArrays(viconTs, predTimestamps)
+	numPoints = len(gt)
+	x_axis = viconTs[0, :][gt].reshape(numPoints, 1)
 
-	lastIndex_gt = (numInstances) if (k + numInstances <= numInstancesPred) else (numInstancesPred-k)
-	lastIndex_pred = (k + numInstances) if (k + numInstances <= numInstancesPred) else (numInstancesPred)
-	numInstPlot = lastIndex_gt # number of instances being plotted
+	gt_roll_pitch_yaw = gt_roll_pitch_yaw[:, gt].reshape(3, numPoints)
+	pred_roll_pitch_yaw = pred_roll_pitch_yaw[:, pt].reshape(3, numPoints)
 
 	plt.subplot(311)
-	plt.plot(viconTs[0, 0:numInstPlot].reshape(numInstPlot, 1), gt_roll_pitch_yaw[0, 0:lastIndex_gt].reshape(numInstPlot, 1), 'k-')
-	plt.plot(predTimestamps[0, k:lastIndex_pred].reshape(numInstPlot, 1), pred_roll_pitch_yaw[0, k:lastIndex_pred].reshape(numInstPlot, 1), 'r-')
+	plt.plot(x_axis, gt_roll_pitch_yaw[0, :].reshape(numPoints, 1), 'k-')
+	plt.plot(x_axis, pred_roll_pitch_yaw[0, :].reshape(numPoints, 1), 'r-')
 
 	plt.subplot(312)
-	plt.plot(viconTs[0, 0:numInstPlot].reshape(numInstPlot, 1), gt_roll_pitch_yaw[1, :].reshape(numInstPlot, 1), 'k-')
-	plt.plot(predTimestamps[0, k:lastIndex_pred].reshape(numInstPlot, 1), pred_roll_pitch_yaw[1, k:lastIndex_pred].reshape(numInstPlot, 1), 'g-')
+	plt.plot(x_axis, gt_roll_pitch_yaw[1, :].reshape(numPoints, 1), 'k-')
+	plt.plot(x_axis, pred_roll_pitch_yaw[1, :].reshape(numPoints, 1), 'g-')
 
 	plt.subplot(313)
-	plt.plot(viconTs[0, 0:numInstPlot].reshape(numInstPlot, 1), gt_roll_pitch_yaw[2, :].reshape(numInstPlot, 1), 'k-')
-	plt.plot(predTimestamps[0, k:lastIndex_pred].reshape(numInstPlot, 1), pred_roll_pitch_yaw[2, k:lastIndex_pred].reshape(numInstPlot, 1), 'b-')
+	plt.plot(x_axis, gt_roll_pitch_yaw[2, :].reshape(numPoints, 1), 'k-')
+	plt.plot(x_axis, pred_roll_pitch_yaw[2, :].reshape(numPoints, 1), 'b-')
 
 	plt.show()
