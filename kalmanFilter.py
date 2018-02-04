@@ -59,22 +59,26 @@ def getStateFromOriQuatAngvel(q, w):
 def getQuatFromRotationVector(rot):
 	# Assuming rot is 3 X 1
 	# Returns a 4 X 1 numpy array representing a Quaternion
+	rot = rot.reshape(3, 1)
 	rotNorm = math.sqrt(rot[0, 0]**2 + rot[1, 0]**2 + rot[2, 0]**2)
-	angleCosine = math.cos(rotNorm/2)
-	angleSine = math.sin(rotNorm/2)
-	return np.asarray([angleCosine, angleSine * (rot[0,0]/rotNorm), angleSine * (rot[1,0]/rotNorm), angleSine * (rot[2,0]/rotNorm)])
+	angleCos = math.cos(rotNorm/2)
+	angleSin = math.sin(rotNorm/2)
+	return np.asarray([angleCos, angleSin * (rot[0,0]/rotNorm), angleSin * (rot[1,0]/rotNorm), angleSin * (rot[2,0]/rotNorm)]).reshape(4, 1)
 
 def getRotationVectorFromQuat(q):
 	# q is 4 X 1 quaternion
 	# return 3 X 1 rotation vector
-	mod_w = 2 * math.acos(q[0,0])
-	sin_alpha_w_by_2 = math.sin(mod_w/2)
+	q = q.reshape(4, 1)
+	mod_w = math.sqrt(q[1, 0]**2 + q[2, 0]**2 + q[3, 0]**2)
+	theta = 2 * math.atan2(mod_w, q[0,0])
+	sin_alpha_w_by_2 = math.sin(theta/2)
 	const = mod_w / sin_alpha_w_by_2
 	return np.asarray([q[1,0] * const, q[2,0] * const, q[3,0] * const]).reshape(3, 1)
 
 def getQuatRotFromAngularVelocity(w, delta_t):
 	# Assuming w is 3 X 1
 	# Returns a 4 X 1 numpy array representing a Quaternion
+	w = w.reshape(3, 1)
 	rotNorm = math.sqrt(w[0, 0]**2 + w[1, 0]**2 + w[2, 0]**2)
 	angleCosine = math.cos(rotNorm * delta_t/2)
 	angleSine = math.sin(rotNorm * delta_t/2)
@@ -83,6 +87,7 @@ def getQuatRotFromAngularVelocity(w, delta_t):
 def calMeanOfAngularVelocity(Y):
 	# Assuming Y is 7 X 1
 	# Angular velocity is in the last three components
+	Y = Y.reshape(7, 1)
 	result = np.zeros((3, 1))
 	for y in Y:
 		result = result + y[4:7, 0]

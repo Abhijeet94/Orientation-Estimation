@@ -77,5 +77,75 @@ def viewVicon():
 		fig.canvas.draw()
 		fig.canvas.flush_events()
 		fig.show()
-		print transforms3d.euler.mat2euler(data[:, :, i], 'syxz')
-		# sleep(0.1) 
+		# print transforms3d.euler.mat2euler(data[:, :, i], 'sxyz')
+
+def plotEulerAnglesVicon():
+	data = loadFile(os.path.join(VICON_FOLDER, 'viconRot5.mat'))
+	ts = data['ts']
+	data = data['rots']
+	numInstances = data.shape[2]
+
+	roll_pitch_yaw = np.zeros((3, numInstances))
+
+	for i in range(numInstances):
+		r, p, y = transforms3d.euler.mat2euler(data[:, :, i], 'sxyz')
+		roll_pitch_yaw[0, i] = r
+		roll_pitch_yaw[1, i] = p
+		roll_pitch_yaw[2, i] = y
+
+	plt.subplot(311)
+	plt.plot(ts.reshape(numInstances, 1), roll_pitch_yaw[0, :].reshape(numInstances, 1), 'r-')
+
+	plt.subplot(312)
+	plt.plot(ts.reshape(numInstances, 1), roll_pitch_yaw[1, :].reshape(numInstances, 1), 'b-')
+
+	plt.subplot(313)
+	plt.plot(ts.reshape(numInstances, 1), roll_pitch_yaw[2, :].reshape(numInstances, 1), 'g-')
+
+	plt.show()
+
+def plotGTruthAndPredictions(viconFile, predictions, predTimestamps):
+	viconData = loadFile(os.path.join(VICON_FOLDER, viconFile))
+	viconTs = viconData['ts']
+	viconMatrices = viconData['rots']
+	numInstances = viconMatrices.shape[2]
+	gt_roll_pitch_yaw = np.zeros((3, numInstances))
+
+	for i in range(numInstances):
+		r, p, y = transforms3d.euler.mat2euler(data[:, :, i], 'sxyz')
+		gt_roll_pitch_yaw[0, i] = r
+		gt_roll_pitch_yaw[1, i] = p
+		gt_roll_pitch_yaw[2, i] = y
+
+
+	numInstancesPred = predTimestamps.shape[1]
+	pred_roll_pitch_yaw = np.zeros((3, numInstancesPred))
+	for i in range(numInstancesPred):
+		r, p, y = transforms3d.euler.quat2euler(predictions[i], 'sxyz')
+		pred_roll_pitch_yaw[0, i] = r
+		pred_roll_pitch_yaw[1, i] = p
+		pred_roll_pitch_yaw[2, i] = y
+
+	k = 0 # First index that matches - assumed that the others will match in sequence
+	lastDiff = abs(viconTs[0] - predTimestamps[k])
+	# Assuming there will be no index out of range
+	while abs(viconTs[0] - predTimestamps[k + 1]) < lastDiff:
+		lastDiff = abs(viconTs[0] - predTimestamps[k])
+		k = k + 1
+
+	lastIndex_gt = (numInstances) if (k + numInstances <= numInstancesPred) else (numInstancesPred-k)
+	lastIndex_pred = (k + numInstances) if (k + numInstances <= numInstancesPred) else (numInstancesPred)
+
+	plt.subplot(311)
+	plt.plot(ts.reshape(numInstances, 1), gt_roll_pitch_yaw[0, 0:lastIndex_gt].reshape(numInstances, 1), 'k-')
+	plt.plot(ts.reshape(numInstances, 1), pred_roll_pitch_yaw[0, k:lastIndex_pred].reshape(numInstances, 1), 'r-')
+
+	plt.subplot(312)
+	plt.plot(ts.reshape(numInstances, 1), gt_roll_pitch_yaw[1, :].reshape(numInstances, 1), 'k-')
+	plt.plot(ts.reshape(numInstances, 1), pred_roll_pitch_yaw[1, k:lastIndex_pred].reshape(numInstances, 1), 'g-')
+
+	plt.subplot(313)
+	plt.plot(ts.reshape(numInstances, 1), gt_roll_pitch_yaw[2, :].reshape(numInstances, 1), 'k-')
+	plt.plot(ts.reshape(numInstances, 1), pred_roll_pitch_yaw[2, k:lastIndex_pred].reshape(numInstances, 1), 'r-')
+
+	plt.show()

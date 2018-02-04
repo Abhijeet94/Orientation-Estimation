@@ -48,4 +48,5 @@ if __name__ == "__main__":
 	# data = loadFile(os.path.join(CAM_FOLDER, 'cam1.mat'))
 	# print data
 	# seeCameraSample()
-	viewVicon()
+	# viewVicon()
+	plotEulerAnglesVicon()
