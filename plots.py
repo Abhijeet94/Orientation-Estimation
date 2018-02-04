@@ -121,16 +121,17 @@ def plotGTruthAndPredictions(viconFile, predictions, predTimestamps):
 	numInstancesPred = predTimestamps.shape[1]
 	pred_roll_pitch_yaw = np.zeros((3, numInstancesPred))
 	for i in range(numInstancesPred):
-		r, p, y = transforms3d.euler.quat2euler(predictions[i].tolist(), 'sxyz')
+		pred = [predictions[i][0], predictions[i][1], predictions[i][2], predictions[i][3]]
+		r, p, y = transforms3d.euler.quat2euler(pred, 'sxyz')
 		pred_roll_pitch_yaw[0, i] = r
 		pred_roll_pitch_yaw[1, i] = p
 		pred_roll_pitch_yaw[2, i] = y
 
 	k = 0 # First index that matches - assumed that the others will match in sequence
-	lastDiff = abs(viconTs[0] - predTimestamps[k])
+	lastDiff = abs(viconTs[0, 0] - predTimestamps[0, k])
 	# Assuming there will be no index out of range
-	while abs(viconTs[0] - predTimestamps[k + 1]) < lastDiff:
-		lastDiff = abs(viconTs[0] - predTimestamps[k])
+	while abs(viconTs[0, 0] - predTimestamps[0, k + 1]) < lastDiff:
+		lastDiff = abs(viconTs[0, 0] - predTimestamps[0, k])
 		k = k + 1
 
 	lastIndex_gt = (numInstances) if (k + numInstances <= numInstancesPred) else (numInstancesPred-k)
@@ -138,15 +139,15 @@ def plotGTruthAndPredictions(viconFile, predictions, predTimestamps):
 	numInstPlot = lastIndex_gt # number of instances being plotted
 
 	plt.subplot(311)
-	plt.plot(ts[0, 0:numInstPlot].reshape(numInstPlot, 1), gt_roll_pitch_yaw[0, 0:lastIndex_gt].reshape(numInstPlot, 1), 'k-')
+	plt.plot(viconTs[0, 0:numInstPlot].reshape(numInstPlot, 1), gt_roll_pitch_yaw[0, 0:lastIndex_gt].reshape(numInstPlot, 1), 'k-')
 	plt.plot(predTimestamps[0, k:lastIndex_pred].reshape(numInstPlot, 1), pred_roll_pitch_yaw[0, k:lastIndex_pred].reshape(numInstPlot, 1), 'r-')
 
 	plt.subplot(312)
-	plt.plot(ts[0, 0:numInstPlot].reshape(numInstPlot, 1), gt_roll_pitch_yaw[1, :].reshape(numInstPlot, 1), 'k-')
+	plt.plot(viconTs[0, 0:numInstPlot].reshape(numInstPlot, 1), gt_roll_pitch_yaw[1, :].reshape(numInstPlot, 1), 'k-')
 	plt.plot(predTimestamps[0, k:lastIndex_pred].reshape(numInstPlot, 1), pred_roll_pitch_yaw[1, k:lastIndex_pred].reshape(numInstPlot, 1), 'g-')
 
 	plt.subplot(313)
-	plt.plot(ts[0, 0:numInstPlot].reshape(numInstPlot, 1), gt_roll_pitch_yaw[2, :].reshape(numInstPlot, 1), 'k-')
-	plt.plot(predTimestamps[0, k:lastIndex_pred].reshape(numInstPlot, 1), pred_roll_pitch_yaw[2, k:lastIndex_pred].reshape(numInstPlot, 1), 'r-')
+	plt.plot(viconTs[0, 0:numInstPlot].reshape(numInstPlot, 1), gt_roll_pitch_yaw[2, :].reshape(numInstPlot, 1), 'k-')
+	plt.plot(predTimestamps[0, k:lastIndex_pred].reshape(numInstPlot, 1), pred_roll_pitch_yaw[2, k:lastIndex_pred].reshape(numInstPlot, 1), 'b-')
 
 	plt.show()
