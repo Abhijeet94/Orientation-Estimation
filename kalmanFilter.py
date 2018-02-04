@@ -54,7 +54,7 @@ def getOriQuatAngvelFromVector(vec):
 def getStateFromOriQuatAngvel(q, w):
 	# Concatenating into single numpy array
 	# For example, if q is 4 X 1 and w is 3 X 1, result is 7 X 1
-	return np.concatenate(q, w)
+	return np.concatenate((q.reshape(q.size, 1), w.reshape(w.size, 1)))
 
 def getQuatFromRotationVector(rot):
 	# Assuming rot is 3 X 1
@@ -87,30 +87,30 @@ def getQuatRotFromAngularVelocity(w, delta_t):
 def calMeanOfAngularVelocity(Y):
 	# Assuming Y is 7 X 1
 	# Angular velocity is in the last three components
-	Y = Y.reshape(7, 1)
 	result = np.zeros((3, 1))
 	for y in Y:
 		result = result + y[4:7, 0]
 	return result/len(Y)
 
 def calMeanOfQuat(Y, startValue = None):
-	# Assuming Y is 7 X 1
+	# Assuming Y is list of np arrays of size 7 X 1
 	# Quat is in the first four components
 	# result is 4 X 1, [4 X 1]
 	# first representing the mean, the other last iteration e_i
 
-	if startValue == None:
+	if startValue is None:
 		startValue = np.asarray([0, 0, 0, 0]).reshape(4, 1)
 
 	prevQBar = startValue
 	n = 6
-	e_quat = [] * (2 * n)
-	e_vec = [] * (2 * n)
+	e_quat = [None] * (2 * n)
+	e_vec = [None] * (2 * n)
 
 	while True:
+		# print 'looping for quat averaging!'
 		e_mean = np.zeros((3, 1))
 		for i in range(2 * n):
-			e_quat[i] = quatMultiply(Y[4:7, 0], quatInv(prevQBar))
+			e_quat[i] = quatMultiply(Y[i][0:4, 0], quatInv(prevQBar))
 			e_vec[i] = getRotationVectorFromQuat(e_quat[i])
 			e_mean = e_mean + e_vec[i]
 		e_mean = e_mean / (2 * n * 1.0)
@@ -153,31 +153,36 @@ def UKF(gyroData, accelerometerData, timestamps):
 	prevCovariance_P_km1 = np.zeros((6, 6))
 
 	# Final result - Orientation represented in quaternions
-	result = [] * len(timestamps)
+	result = [None] * len(timestamps)
 
-	for index, ts in enumerate(timestamps):
+	for index in range(timestamps.shape[1]):
+		print 'Iteration: ' + str(index)
 		# Computing Sigma Points
 		# Cholesky decomposition
 		n = 6
 		S = np.linalg.cholesky(np.add(prevCovariance_P_km1, processNoiseCovariance_Q))
 		S_hsplit = np.hsplit(S, n)
 		# 2n points - n X 1
-		W = [] * (2 * n)
+		W = [None] * (2 * n)
 		for i in range(n):
 			W[i] = math.sqrt(2 * n) * S_hsplit[i]
 			W[i + n] = -1 * math.sqrt(2 * n) * S_hsplit[i]
+		# print W
+		# exit()
 
 		# 2n points - 7 X 1
-		X = [] * (2 * n)
+		X = [None] * (2 * n)
 		q_prevState, w_prevState = getOriQuatAngvelFromState(prevStateEstimate_x_km1)
 		for i in range(2 * n):
 			qv_W_i, w_W_i = getOriQuatAngvelFromVector(W[i])
 			quatPart = quatMultiply(q_prevState, getQuatFromRotationVector(qv_W_i))
 			angVelPart = np.add(w_prevState, w_W_i)
 			X[i] = getStateFromOriQuatAngvel(quatPart, angVelPart)
+		# print X
+		# exit()
 		
 		# 2n points - 7 X 1
-		Y = [] * (2 * n)
+		Y = [None] * (2 * n)
 		delta_t = 0.000001 if (index == 0) else timestamps[index] - timestamps[index - 1]
 		q_delta = getQuatRotFromAngularVelocity(w_prevState, delta_t)
 		for i in range(2 * n):
@@ -193,7 +198,7 @@ def UKF(gyroData, accelerometerData, timestamps):
 		Ymean_x_k_bar = getStateFromOriQuatAngvel(q_bar, w_bar)
 
 		# 2n points - 6 X 1
-		W_script_prime = [] * (2 * n)
+		W_script_prime = [None] * (2 * n)
 		for i in range(2 * n):
 			q_Yi, w_Yi = getOriQuatAngvelFromState(Y[i])
 			quatPart = q_lastIter_e[i]
@@ -211,7 +216,7 @@ def UKF(gyroData, accelerometerData, timestamps):
 		##################
 
 		# 2n points - 7 X 1
-		Z = [] * (2 * n)
+		Z = [None] * (2 * n)
 		for i in range(2 * n):
 			q_Yi, w_Yi = getOriQuatAngvelFromState(Y[i])
 			quatPart = np.asarray([0, 0, 0, 0]).reshape(4, 1)
@@ -267,7 +272,7 @@ def UKF(gyroData, accelerometerData, timestamps):
 		Ymean_x_k_bar = getStateFromOriQuatAngvel(q_bar, w_bar)
 
 		# 2n points - 6 X 1
-		W_script_prime = [] * (2 * n)
+		W_script_prime = [None] * (2 * n)
 		for i in range(2 * n):
 			q_Yi, w_Yi = getOriQuatAngvelFromState(Y[i])
 			quatPart = q_lastIter_e[i]
@@ -283,7 +288,7 @@ def UKF(gyroData, accelerometerData, timestamps):
 		##
 
 		# 2n points - 7 X 1
-		Z = [] * (2 * n)
+		Z = [None] * (2 * n)
 		for i in range(2 * n):
 			q_Yi, w_Yi = getOriQuatAngvelFromState(Y[i])
 			g = np.asarray([0, 0, 0, 9.8])

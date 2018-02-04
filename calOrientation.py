@@ -6,6 +6,7 @@ import numpy as np
 from constants import *
 from plots import *
 from utils import *
+from kalmanFilter import *
 
 def seeCameraSample():
 	data = loadFile(os.path.join(CAM_FOLDER, 'cam1.mat'))
@@ -44,9 +45,37 @@ def rawAngularVelToPhysical(wx, wy, wz):
 	rx, ry, rz = rx * toRadian, ry * toRadian, rz * toRadian
 	return rx, ry, rz
 
+def applyFilterAndCompare():
+	imuFileName = 'imuRaw1.mat'
+	viconFileName = 'viconRot1.mat'
+
+	data = loadFile(os.path.join(IMU_FOLDER, imuFileName))
+	sensorData = data['vals']
+	timestamps = data['ts']
+	numInstances = timestamps.shape[1]
+
+	gyroData = np.zeros((numInstances, 3))
+	accelData = np.zeros((numInstances, 3))
+
+	for i in range(numInstances):
+		wx, wy, wz = rawAngularVelToPhysical(sensorData[4, i], sensorData[5, i], sensorData[3, i])
+		gyroData[i, 0] = wx
+		gyroData[i, 1] = wy
+		gyroData[i, 2] = wz
+
+		ax, ay, az = rawAccToPhysical(sensorData[0, i], sensorData[1, i], sensorData[2, i])
+		accelData[i, 0] = ax
+		accelData[i, 1] = ay
+		accelData[i, 2] = az
+
+	filterResult = UKF(gyroData, accelData, timestamps)
+	plotGTruthAndPredictions(viconFileName, filterResult, timestamps)
+
+
 if __name__ == "__main__":
 	# data = loadFile(os.path.join(CAM_FOLDER, 'cam1.mat'))
 	# print data
 	# seeCameraSample()
 	# viewVicon()
-	plotEulerAnglesVicon()
+	# plotEulerAnglesVicon()
+	applyFilterAndCompare()

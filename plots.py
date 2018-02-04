@@ -135,17 +135,18 @@ def plotGTruthAndPredictions(viconFile, predictions, predTimestamps):
 
 	lastIndex_gt = (numInstances) if (k + numInstances <= numInstancesPred) else (numInstancesPred-k)
 	lastIndex_pred = (k + numInstances) if (k + numInstances <= numInstancesPred) else (numInstancesPred)
+	numInstPlot = lastIndex_gt # number of instances being plotted
 
 	plt.subplot(311)
-	plt.plot(ts.reshape(numInstances, 1), gt_roll_pitch_yaw[0, 0:lastIndex_gt].reshape(numInstances, 1), 'k-')
-	plt.plot(ts.reshape(numInstances, 1), pred_roll_pitch_yaw[0, k:lastIndex_pred].reshape(numInstances, 1), 'r-')
+	plt.plot(ts[0, 0:numInstPlot].reshape(numInstPlot, 1), gt_roll_pitch_yaw[0, 0:lastIndex_gt].reshape(numInstPlot, 1), 'k-')
+	plt.plot(predTimestamps[0, k:lastIndex_pred].reshape(numInstPlot, 1), pred_roll_pitch_yaw[0, k:lastIndex_pred].reshape(numInstPlot, 1), 'r-')
 
 	plt.subplot(312)
-	plt.plot(ts.reshape(numInstances, 1), gt_roll_pitch_yaw[1, :].reshape(numInstances, 1), 'k-')
-	plt.plot(ts.reshape(numInstances, 1), pred_roll_pitch_yaw[1, k:lastIndex_pred].reshape(numInstances, 1), 'g-')
+	plt.plot(ts[0, 0:numInstPlot].reshape(numInstPlot, 1), gt_roll_pitch_yaw[1, :].reshape(numInstPlot, 1), 'k-')
+	plt.plot(predTimestamps[0, k:lastIndex_pred].reshape(numInstPlot, 1), pred_roll_pitch_yaw[1, k:lastIndex_pred].reshape(numInstPlot, 1), 'g-')
 
 	plt.subplot(313)
-	plt.plot(ts.reshape(numInstances, 1), gt_roll_pitch_yaw[2, :].reshape(numInstances, 1), 'k-')
-	plt.plot(ts.reshape(numInstances, 1), pred_roll_pitch_yaw[2, k:lastIndex_pred].reshape(numInstances, 1), 'r-')
+	plt.plot(ts[0, 0:numInstPlot].reshape(numInstPlot, 1), gt_roll_pitch_yaw[2, :].reshape(numInstPlot, 1), 'k-')
+	plt.plot(predTimestamps[0, k:lastIndex_pred].reshape(numInstPlot, 1), pred_roll_pitch_yaw[2, k:lastIndex_pred].reshape(numInstPlot, 1), 'r-')
 
 	plt.show()
