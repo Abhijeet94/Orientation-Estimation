@@ -112,7 +112,7 @@ def plotGTruthAndPredictions(viconFile, predictions, predTimestamps):
 	gt_roll_pitch_yaw = np.zeros((3, numInstances))
 
 	for i in range(numInstances):
-		r, p, y = transforms3d.euler.mat2euler(data[:, :, i], 'sxyz')
+		r, p, y = transforms3d.euler.mat2euler(viconMatrices[:, :, i], 'sxyz')
 		gt_roll_pitch_yaw[0, i] = r
 		gt_roll_pitch_yaw[1, i] = p
 		gt_roll_pitch_yaw[2, i] = y
@@ -121,7 +121,7 @@ def plotGTruthAndPredictions(viconFile, predictions, predTimestamps):
 	numInstancesPred = predTimestamps.shape[1]
 	pred_roll_pitch_yaw = np.zeros((3, numInstancesPred))
 	for i in range(numInstancesPred):
-		r, p, y = transforms3d.euler.quat2euler(predictions[i], 'sxyz')
+		r, p, y = transforms3d.euler.quat2euler(predictions[i].tolist(), 'sxyz')
 		pred_roll_pitch_yaw[0, i] = r
 		pred_roll_pitch_yaw[1, i] = p
 		pred_roll_pitch_yaw[2, i] = y
