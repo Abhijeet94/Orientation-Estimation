@@ -18,36 +18,36 @@ def seeCameraSample():
 	cv2.destroyAllWindows()
 
 def rawAccToPhysical(ax, ay, az):
-	biasX = 1510 #mV
-	biasY = 1490
-	biasZ = 1510
-	sensitivityX = 304 #mV/g
-	sensitivityY = 306
-	sensitivityZ = 300
+	biasX = 510 #1510 #mV
+	biasY = 501 #1490
+	biasZ = 606 #1510
+	sensitivityX = 330 #mV/g
+	sensitivityY = 330
+	sensitivityZ = 330
 	vref = 3300 #mV
-	rx = (((ax * vref) / 1023.0) - biasX) / sensitivityX
-	ry = (((ay * vref) / 1023.0) - biasY) / sensitivityY
-	rz = (((az * vref) / 1023.0) - biasZ) / sensitivityZ
+	rx = ((((ax - biasX) * vref) / 1023.0)) / sensitivityX
+	ry = ((((ay - biasY) * vref) / 1023.0)) / sensitivityY
+	rz = ((((az - biasZ) * vref) / 1023.0)) / sensitivityZ
 	return -1 * rx, -1 * ry, rz  	# negates the rx, ry because accelerometer reading is opposite
 
 def rawAngularVelToPhysical(wx, wy, wz):
-	biasX = 1230 #mV
-	biasY = 1230
-	biasZ = 1230
-	sensitivityX = 333 #mV/g
-	sensitivityY = 333			# confirm!
-	sensitivityZ = 333
+	biasX = 373 #1230 #mV
+	biasY = 376 #1230
+	biasZ = 370 #1230
+	sensitivityX = 3.33 #mV/g
+	sensitivityY = 3.33			# confirm!
+	sensitivityZ = 3.33
 	vref = 3300 #mV
-	rx = (((wx * vref) / 1023.0) - biasX) / sensitivityX
-	ry = (((wy * vref) / 1023.0) - biasY) / sensitivityY
-	rz = (((wz * vref) / 1023.0) - biasZ) / sensitivityZ
+	rx = ((((wx - biasX) * vref) / 1023.0)) / sensitivityX
+	ry = ((((wy - biasY) * vref) / 1023.0)) / sensitivityY
+	rz = ((((wz - biasZ) * vref) / 1023.0)) / sensitivityZ
 	toRadian = math.pi / 180
 	rx, ry, rz = rx * toRadian, ry * toRadian, rz * toRadian
 	return rx, ry, rz
 
 def applyFilterAndCompare():
-	imuFileName = 'imuRaw1.mat'
-	viconFileName = 'viconRot1.mat'
+	imuFileName = 'imuRaw3.mat'
+	viconFileName = 'viconRot3.mat'
 
 	data = loadFile(os.path.join(IMU_FOLDER, imuFileName))
 	sensorData = data['vals']
@@ -59,9 +59,10 @@ def applyFilterAndCompare():
 
 	for i in range(numInstances):
 		wx, wy, wz = rawAngularVelToPhysical(sensorData[4, i], sensorData[5, i], sensorData[3, i])
-		gyroData[i, 0] = wx
-		gyroData[i, 1] = wy
-		gyroData[i, 2] = wz
+		gyroData[i, 0] = 1 * wx
+		gyroData[i, 1] = 1 * wy
+		gyroData[i, 2] = 1 * wz
+		# print gyroData[i, :]
 
 		ax, ay, az = rawAccToPhysical(sensorData[0, i], sensorData[1, i], sensorData[2, i])
 		accelData[i, 0] = ax
@@ -69,6 +70,7 @@ def applyFilterAndCompare():
 		accelData[i, 2] = az
 
 	filterResult = UKF(gyroData, accelData, timestamps)
+	# filterResult = checkGyroIntegration(gyroData, timestamps)
 	plotGTruthAndPredictions(viconFileName, filterResult, timestamps)
 
 

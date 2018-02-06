@@ -2,6 +2,8 @@ from scipy import io
 import cv2, os
 import math
 import numpy as np
+import random
+import pdb
 
 from constants import *
 from plots import *
@@ -42,7 +44,10 @@ def getNormOfVector(x):
 	x = x.reshape(x.size, 1)
 	s = 0.0
 	for i in range(x.size):
-		s = s + x[i, 0] ** 2
+		if abs(x[i, 0]) < 1e-20:
+			s = s + 0
+		else:
+			s = s + x[i, 0] ** 2
 	return math.sqrt(s)
 
 def getOriQuatAngvelFromState(state):
@@ -69,6 +74,8 @@ def getQuatFromRotationVector(rot):
 	# print rot
 	rot = rot.reshape(3, 1)
 	rotNorm = math.sqrt(rot[0, 0]**2 + rot[1, 0]**2 + rot[2, 0]**2)
+	if abs(rotNorm - 0) < 1e-20:
+		return np.asarray([1, 0, 0, 0]).reshape(4, 1)
 	angleCos = math.cos(rotNorm/2)
 	angleSin = math.sin(rotNorm/2)
 	return np.asarray([angleCos, angleSin * (rot[0,0]/rotNorm), angleSin * (rot[1,0]/rotNorm), angleSin * (rot[2,0]/rotNorm)]).reshape(4, 1)
@@ -79,7 +86,7 @@ def getRotationVectorFromQuat(q):
 	q = q.reshape(4, 1)
 	mod_w = math.sqrt(q[1, 0]**2 + q[2, 0]**2 + q[3, 0]**2)
 	theta = 2 * math.atan2(mod_w, q[0,0])
-	if abs(theta - 0) < 0.00001:
+	if abs(theta - 0) < 1e-10:
 		return np.asarray([0, 0, 0]).reshape(3, 1)
 	else:
 		sin_alpha_w_by_2 = math.sin(theta/2)
@@ -111,39 +118,102 @@ def calMeanOfQuat(Y, startValue = None):
 	# print Y
 
 	if startValue is None:
-		startValue = np.asarray([0, 0, 0, 1]).reshape(4, 1)
+		startValue = np.asarray([0, 0.707, 0.707, 0]).reshape(4, 1)
 
 	prevQBar = startValue
-	n = 6
-	e_quat = [None] * (2 * n)
-	e_vec = [None] * (2 * n)
+	listSize = len(Y)
+	e_quat = [None] * listSize
+	e_vec = [None] * listSize
+	numIterations = 0
+
+	totalIter = 10
+	countIter = 0
 
 	while True:
 		e_mean = np.zeros((3, 1))
-		for i in range(2 * n):
-			if abs(getNormOfVector(prevQBar) - 0) < 0.001:
+		for i in range(listSize):
+			if abs(getNormOfVector(prevQBar) - 0) < 1e-10:
 				e_quat[i] = Y[i][0:4, 0]
 			else:
 				e_quat[i] = quatMultiply(Y[i][0:4, 0], quatInv(prevQBar))
 			e_vec[i] = getRotationVectorFromQuat(e_quat[i])
 			e_mean = e_mean + e_vec[i]
-		e_mean = e_mean / (2 * n * 1.0)
-		# print 'in cal mean'
-		# print e_quat, e_mean
+			# print e_quat[i]
+			# print e_mean
+		e_mean = e_mean / (listSize * 1.0)
+		# print 'in cal mean ' + str(random.random())
+		# print e_mean
 		if abs(getNormOfVector(e_mean) - 0) < 1e-10:
 			e_mean_quat = prevQBar
 		else:
 			e_mean_quat = getQuatFromRotationVector(e_mean)
+			e_mean_quat = e_mean_quat / quatNorm(e_mean_quat)
 		prevQBar = quatMultiply(e_mean_quat, prevQBar)
 
-		if(math.sqrt(e_mean[0, 0] ** 2 + e_mean[1, 0] ** 2 + e_mean[2, 0] ** 2) < 0.05):
+		if(math.sqrt(e_mean[0, 0] ** 2 + e_mean[1, 0] ** 2 + e_mean[2, 0] ** 2) < 1e-5):
 			break
+		# countIter = countIter + 1
+		# if countIter > totalIter:
+		# 	break
 
+		numIterations = numIterations + 1
+		if numIterations > 25:
+			break
+	# print '-------'
 	return prevQBar, e_quat
+
+def testQuatAveraging():
+	Y = []
+
+	# Y.append(np.asarray([0, 0.707, 0.5, 0.5]).reshape(4, 1))
+	# Y.append(np.asarray([0, 0.707, 0.5, 0.5]).reshape(4, 1))
+	# Y.append(np.asarray([0, 0.707, 0.5, 0.5]).reshape(4, 1))
+
+	Y.append(np.asarray([0, 0, 1, 0]).reshape(4, 1))
+	Y.append(np.asarray([0, 0, 1, 0]).reshape(4, 1))
+	Y.append(np.asarray([0, 0, 1, 0]).reshape(4, 1))
+
+	# Y.append(np.asarray([0, 0.707, 0.707, 0]).reshape(4, 1))
+	# Y.append(np.asarray([0, 0.707, 0.707, 0]).reshape(4, 1))
+	# Y.append(np.asarray([0, 0.707, 0.707, 0]).reshape(4, 1))
+
+	res1, res2 = calMeanOfQuat(Y)
+	return res1
+
+def testQuatToRotToQuat():
+	# x = np.asarray([0, 1, 0, 0]).reshape(4, 1)
+	x = np.asarray([0, 0.707, 0.5, 0.5]).reshape(4, 1)
+	# x = np.asarray([1, 0, 0, 0]).reshape(4, 1)
+	y = getRotationVectorFromQuat(x)
+	z = getQuatFromRotationVector(y)
+	print x
+	print z/quatNorm(z)
 
 def getAccelQuatFromAccelData(x, y, z):
 	# return 4 X 1 numpy array
 	return np.asarray([0, x, y, z])
+
+def normalizeQuatInStateVector(X):
+	norm = quatNorm(X[0:4, 0])
+	X[0, 0] = X[0, 0] / norm
+	X[1, 0] = X[1, 0] / norm
+	X[2, 0] = X[2, 0] / norm
+	X[3, 0] = X[3, 0] / norm
+	return X
+
+def checkGyroIntegration(gyroData, timestamps):
+	result = [None] * timestamps.shape[1]
+	prevQ = np.asarray([1, 0, 0, 0])
+
+	for index in range(timestamps.shape[1]):
+		delta_t = 0.000001 if (index == 0) else timestamps[0, index] - timestamps[0, index - 1]
+		wdt_x = gyroData[index, 0] * delta_t
+		wdt_y = gyroData[index, 1] * delta_t
+		wdt_z = gyroData[index, 2] * delta_t
+
+		result[index] = quatMultiply(prevQ, getQuatFromRotationVector(np.asarray([wdt_x, wdt_y, wdt_z]).reshape(3, 1)))
+		prevQ = result[index]
+	return result
 
 def UKF(gyroData, accelerometerData, timestamps):
 	'''
@@ -154,28 +224,30 @@ def UKF(gyroData, accelerometerData, timestamps):
 	UKF() - calculate the orientation of the body, using the Unscented Kalman Filter
 	'''
 
-	positionCovParam = 4
-	angularVelocityCovParam = 5
+	positionCovParam = 0.1
+	angularVelocityCovParam = 5e-03
 	# 6 X 6 
 	processNoiseCovariance_Q = np.diag(np.concatenate((positionCovParam * np.ones(3), angularVelocityCovParam * np.ones(3))))
 
-	accCovParam = 4
-	gyroCovParam = 5
+	accCovParam = 4e-03
+	gyroCovParam = 5e-03
 	# 6 X 6
 	gyroNoiseCovariance_R = np.diag(np.concatenate((accCovParam * np.ones(3), gyroCovParam * np.ones(3))))
 	accelerometerNoiseCovariance_R = gyroNoiseCovariance_R
 
 	# 7 X 1
-	prevStateEstimate_x_km1 = np.asarray([0, 1, 0, 0, 0, 0, 0]).reshape(7, 1)
+	prevStateEstimate_x_km1 = np.asarray([1, 0, 0, 0, 0, 0, 0], dtype=np.float64).reshape(7, 1)
 
 	# 6 X 6
-	prevCovariance_P_km1 = np.identity(6) #np.ones((6, 6))
+	prevCovariance_P_km1 =  np.copy(processNoiseCovariance_Q) #4e-03 * np.identity(6, dtype=np.float64) #np.ones((6, 6))
 
 	# Final result - Orientation represented in quaternions
 	result = [None] * timestamps.size
 
 	for index in range(timestamps.shape[1]):
 		for mindex, measurement in enumerate(['gyro']):#, 'accelerometer']):
+			# Normalize state vector
+			prevStateEstimate_x_km1 = normalizeQuatInStateVector(prevStateEstimate_x_km1)
 			# print 'Iteration: ' + str(index)
 			# print prevStateEstimate_x_km1
 			# Computing Sigma Points
@@ -196,7 +268,7 @@ def UKF(gyroData, accelerometerData, timestamps):
 			q_prevState, w_prevState = getOriQuatAngvelFromState(prevStateEstimate_x_km1)
 			for i in range(2 * n):
 				qv_W_i, w_W_i = getOriQuatAngvelFromVector(W[i])
-				if abs(getNormOfVector(qv_W_i) - 0) < 0.001:
+				if abs(getNormOfVector(qv_W_i) - 0) < 1e-10:
 					quatPart = q_prevState
 				else:
 					quatPart = quatMultiply(q_prevState, getQuatFromRotationVector(qv_W_i))
@@ -208,9 +280,8 @@ def UKF(gyroData, accelerometerData, timestamps):
 			# 2n points - 7 X 1
 			Y = [None] * (2 * n)
 			delta_t = 0.000001 if (index == 0) else timestamps[0, index] - timestamps[0, index - 1]
-			# print delta_t
-			if abs(getNormOfVector(w_prevState) - 0) < 0.001:
-				q_delta = np.asarray([1, 0, 0, 0]).reshape(4, 1)
+			if abs(getNormOfVector(w_prevState) - 0) < 1e-20:
+				q_delta = np.asarray([1, 0, 0, 0], dtype=np.float64).reshape(4, 1)
 			else:
 				q_delta = getQuatRotFromAngularVelocity(w_prevState, delta_t)
 
@@ -270,7 +341,7 @@ def UKF(gyroData, accelerometerData, timestamps):
 			# 	for i in range(2 * n):
 			# 		q_Yi, w_Yi = getOriQuatAngvelFromState(Y[i])
 			# 		g = np.asarray([0, 0, 0, 9.8])
-			# 		if abs(getNormOfVector(q_Yi) - 0) < 0.001:
+			# 		if abs(getNormOfVector(q_Yi) - 0) < 1e-10:
 			# 			q_Yi_inverse = np.asarray([1, 0, 0, 0]).reshape(4, 1)
 			# 		else:
 			# 			q_Yi_inverse = quatInv(q_Yi)
@@ -316,7 +387,7 @@ def UKF(gyroData, accelerometerData, timestamps):
 			# updateVal = np.matmul(kalmanGain_K_k, innovation_v_k)
 			# qv_updateVal, w_updateVal = getOriQuatAngvelFromVector(updateVal)
 			# q_Ymean_x_k_bar, w_Ymean_x_k_bar = getOriQuatAngvelFromState(Ymean_x_k_bar)
-			# if abs(getNormOfVector(qv_updateVal) - 0) < 0.001:
+			# if abs(getNormOfVector(qv_updateVal) - 0) < 1e-10:
 			# 	quatPart = q_Ymean_x_k_bar
 			# else:
 			# 	quatPart = quatMultiply(q_Ymean_x_k_bar, getQuatFromRotationVector(qv_updateVal))
