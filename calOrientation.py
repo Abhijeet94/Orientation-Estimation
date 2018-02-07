@@ -7,6 +7,7 @@ from constants import *
 from plots import *
 from utils import *
 from kalmanFilter import *
+import pdb
 
 def seeCameraSample():
 	data = loadFile(os.path.join(CAM_FOLDER, 'cam1.mat'))
@@ -20,7 +21,7 @@ def seeCameraSample():
 def rawAccToPhysical(ax, ay, az):
 	biasX = 510 #1510 #mV
 	biasY = 501 #1490
-	biasZ = 606 #1510
+	biasZ = 504 #606 #1510
 	sensitivityX = 330 #mV/g
 	sensitivityY = 330
 	sensitivityZ = 330
@@ -45,14 +46,39 @@ def rawAngularVelToPhysical(wx, wy, wz):
 	rx, ry, rz = rx * toRadian, ry * toRadian, rz * toRadian
 	return rx, ry, rz
 
-def applyFilterAndCompare():
-	imuFileName = 'imuRaw1.mat'
-	viconFileName = 'viconRot1.mat'
+def checkAccSensorData():
+	imuFileName = 'imuRaw7.mat'
+	viconFileName = 'viconRot7.mat'
 
 	data = loadFile(os.path.join(IMU_FOLDER, imuFileName))
 	sensorData = data['vals']
 	timestamps = data['ts']
 	numInstances = timestamps.shape[1]
+	numInstances = 200
+	# pdb.set_trace()
+
+	accelData = np.zeros((numInstances, 3))
+
+	# print np.sum(sensorData[:, 0:200], 1)/200
+
+	for i in range(numInstances):
+		# print sensorData[0:3, i]
+		ax, ay, az = rawAccToPhysical(sensorData[0, i], sensorData[1, i], sensorData[2, i])
+		accelData[i, 0] = ax
+		accelData[i, 1] = ay
+		accelData[i, 2] = az
+		print accelData[i, :]
+
+def applyFilterAndCompare():
+	imuFileName = 'imuRaw2.mat'
+	viconFileName = 'viconRot2.mat'
+
+	data = loadFile(os.path.join(IMU_FOLDER, imuFileName))
+	sensorData = data['vals']
+	timestamps = data['ts']
+	numInstances = timestamps.shape[1]
+
+	# pdb.set_trace()
 
 	gyroData = np.zeros((numInstances, 3))
 	accelData = np.zeros((numInstances, 3))
@@ -84,4 +110,5 @@ if __name__ == "__main__":
 	# seeCameraSample()
 	# viewVicon()
 	# plotEulerAnglesVicon()
+	# checkAccSensorData()
 	applyFilterAndCompare()

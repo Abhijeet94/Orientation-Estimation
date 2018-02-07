@@ -87,7 +87,7 @@ def getRotationVectorFromQuat(q):
 	q = q.reshape(4, 1)
 	mod_w = math.sqrt(q[1, 0]**2 + q[2, 0]**2 + q[3, 0]**2)
 	theta = 2 * math.atan2(mod_w, q[0,0])
-	if abs(theta - 0) < 1e-10:
+	if abs(theta - 0) < 1e-20:
 		return np.asarray([0, 0, 0]).reshape(3, 1)
 	else:
 		sin_alpha_w_by_2 = math.sin(theta/2)
@@ -239,12 +239,12 @@ def UKF(gyroData, accelerometerData, timestamps):
 
 	# 6 X 6 
 	positionCovParam = 500
-	angularVelocityCovParam = 0.0001
+	angularVelocityCovParam = 0.01
 	Q_processNoiseCovariance = np.diag(np.concatenate((positionCovParam * np.ones(3), angularVelocityCovParam * np.ones(3))))
 
 	# 6 X 6
-	accCovParam = 500
-	gyroCovParam = 0.0001
+	accCovParam = 0.0500
+	gyroCovParam = 0.01
 	R_measurementNoiseCov = np.diag(np.concatenate((accCovParam * np.ones(3), gyroCovParam * np.ones(3))))
 
 	# 6 X 6
@@ -343,7 +343,6 @@ def UKF(gyroData, accelerometerData, timestamps):
 		for i in range(2 * n):
 			q_Yi, w_Yi = getOriQuatAngvelFromState(Y[i])
 			quatPart = q_lastIter_e[i].reshape(4, 1)
-			# quatPart = quatMultiply(q_Yi, quatInv(q_bar)).reshape(4, 1)
 			angVelPart = w_Yi.reshape(3, 1) - w_bar
 			W_script_prime[i] = getStateFromOriQuatAngvel(getRotationVectorFromQuat(quatPart), angVelPart)
 
