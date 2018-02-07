@@ -46,8 +46,8 @@ def rawAngularVelToPhysical(wx, wy, wz):
 	return rx, ry, rz
 
 def applyFilterAndCompare():
-	imuFileName = 'imuRaw3.mat'
-	viconFileName = 'viconRot3.mat'
+	imuFileName = 'imuRaw4.mat'
+	viconFileName = 'viconRot4.mat'
 
 	data = loadFile(os.path.join(IMU_FOLDER, imuFileName))
 	sensorData = data['vals']
@@ -59,15 +59,17 @@ def applyFilterAndCompare():
 
 	for i in range(numInstances):
 		wx, wy, wz = rawAngularVelToPhysical(sensorData[4, i], sensorData[5, i], sensorData[3, i])
-		gyroData[i, 0] = 1 * wx
-		gyroData[i, 1] = 1 * wy
-		gyroData[i, 2] = 1 * wz
+		gyroData[i, 0] = wx
+		gyroData[i, 1] = wy
+		gyroData[i, 2] = wz
 		# print gyroData[i, :]
 
 		ax, ay, az = rawAccToPhysical(sensorData[0, i], sensorData[1, i], sensorData[2, i])
 		accelData[i, 0] = ax
 		accelData[i, 1] = ay
 		accelData[i, 2] = az
+		# if i > 2500 and i < 3000:
+		# 	print accelData[i, :]
 
 	filterResult = UKF(gyroData, accelData, timestamps)
 	# filterResult = checkGyroIntegration(gyroData, timestamps)
