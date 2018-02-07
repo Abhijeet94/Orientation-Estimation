@@ -240,22 +240,23 @@ def UKF(gyroData, accelerometerData, timestamps):
 	UKF() - calculate the orientation of the body, using the Unscented Kalman Filter
 	'''
 
-	positionCovParam = 20
-	angularVelocityCovParam = 0.05
 	# 6 X 6 
+	positionCovParam = 10
+	angularVelocityCovParam = 0.1
 	processNoiseCovariance_Q = np.diag(np.concatenate((positionCovParam * np.ones(3), angularVelocityCovParam * np.ones(3))))
 
-	accCovParam = 40
-	gyroCovParam = 0.05
 	# 6 X 6
-	gyroNoiseCovariance_R = np.diag(np.concatenate((accCovParam * np.ones(3), gyroCovParam * np.ones(3))))
-	accelerometerNoiseCovariance_R = gyroNoiseCovariance_R
+	accCovParam = 10
+	gyroCovParam = 0.1
+	measurementNoiseCov_R = np.diag(np.concatenate((accCovParam * np.ones(3), gyroCovParam * np.ones(3))))
+
+	# 6 X 6
+	orientationCovParam = 10
+	angVelCovParam = 0.1
+	prevCovariance_P_km1 = np.diag(np.concatenate((orientationCovParam * np.ones(3), angVelCovParam * np.ones(3))))
 
 	# 7 X 1
 	prevStateEstimate_x_km1 = np.asarray([1, 0, 0, 0, 0, 0, 0], dtype=np.float64).reshape(7, 1)
-
-	# 6 X 6
-	prevCovariance_P_km1 = np.copy(processNoiseCovariance_Q) #4e-03 * np.identity(6, dtype=np.float64) #np.ones((6, 6))
 
 	# Final result - Orientation represented in quaternions
 	result = [None] * timestamps.size
@@ -327,7 +328,7 @@ def UKF(gyroData, accelerometerData, timestamps):
 			q_Xi, w_Xi = getOriQuatAngvelFromState(X[i])
 			quatPart = quatMultiply(q_Xi, q_delta)
 			# print quatPart
-			Y[i] = getStateFromOriQuatAngvel(quatPart, w_prevState)
+			Y[i] = getStateFromOriQuatAngvel(quatPart, w_Xi)
 		# print "Y = " + str(Y)
 		# exit()
 
@@ -336,6 +337,8 @@ def UKF(gyroData, accelerometerData, timestamps):
 
 		# 3 X 1
 		w_bar = calMeanOfAngularVelocity(Y)
+		# if index > 1000:
+		# 	print w_bar
 		# 4 X 1, 4 X 1
 		q_bar, q_lastIter_e = calMeanOfQuat(Y, q_prevState)
 		# print q_bar
@@ -354,7 +357,8 @@ def UKF(gyroData, accelerometerData, timestamps):
 			quatPart = q_lastIter_e[i].reshape(4, 1)
 			angVelPart = w_Yi.reshape(3, 1) - w_bar
 			W_script_prime[i] = getStateFromOriQuatAngvel(getRotationVectorFromQuat(quatPart), angVelPart)
-		# print "W_script_prime = " + str(W_script_prime)
+		# if index > 1000:
+		# 	print "W_script_prime = " + str(W_script_prime)
 		# exit()
 
 		###############################################################################################
@@ -367,11 +371,11 @@ def UKF(gyroData, accelerometerData, timestamps):
 		Ycov_P_k_bar = Ycov_P_k_bar / (2 * n)
 		# print "Ycov_P_k_bar = " + str(Ycov_P_k_bar)
 
-		newStateEstimate_x_k = Ymean_x_k_bar 			# testing code !! remove later - testing with prediction only !!
-		newCovariance_P_k = Ycov_P_k_bar 				# testing code !! remove later - testing with prediction only !!
-		newStateEstimate_x_k[4, 0] = gyroData[index, 0] # testing code !! remove later - testing with prediction only !!
-		newStateEstimate_x_k[5, 0] = gyroData[index, 1] # testing code !! remove later - testing with prediction only !!
-		newStateEstimate_x_k[6, 0] = gyroData[index, 2] # testing code !! remove later - testing with prediction only !!
+		# newStateEstimate_x_k = Ymean_x_k_bar 			# testing code !! remove later - testing with prediction only !!
+		# newCovariance_P_k = Ycov_P_k_bar 				# testing code !! remove later - testing with prediction only !!
+		# newStateEstimate_x_k[4, 0] = gyroData[index, 0] # testing code !! remove later - testing with prediction only !!
+		# newStateEstimate_x_k[5, 0] = gyroData[index, 1] # testing code !! remove later - testing with prediction only !!
+		# newStateEstimate_x_k[6, 0] = gyroData[index, 2] # testing code !! remove later - testing with prediction only !!
 		# # print gyroData[index, :]
 
 		##########################
@@ -379,74 +383,68 @@ def UKF(gyroData, accelerometerData, timestamps):
 		##########################
 
 		# 2n points - 6 X 1
-		# Z = [None] * (2 * n)
-		# for i in range(2 * n):
-		# 	q_Yi, w_Yi = getOriQuatAngvelFromState(Y[i])
-		# 	g = np.asarray([0, 0, 0, 9.8])
-		# 	if abs(getNormOfVector(q_Yi) - 0) < 1e-20:
-		# 		q_Yi_inverse = np.asarray([1, 0, 0, 0]).reshape(4, 1)
-		# 		print 'in Z ' + str(random.random()), q_Yi 
-		# 	else:
-		# 		q_Yi_inverse = quatInv(q_Yi)
-		# 	quatPart = getRotationVectorFromQuat(quatMultiply(quatMultiply(q_Yi_inverse, g), q_Yi))
-		# 	angVelPart = w_Yi
-		# 	Z[i] = getStateFromOriQuatAngvel(quatPart, angVelPart)
+		Z = [None] * (2 * n)
+		for i in range(2 * n):
+			q_Yi, w_Yi = getOriQuatAngvelFromState(Y[i])
+			g = np.asarray([0, 0, 0, 9.8])
+			q_Yi_inverse = quatInv(q_Yi)
+			quatPart = getRotationVectorFromQuat(quatMultiply(quatMultiply(q_Yi_inverse, g), q_Yi))
+			angVelPart = w_Yi
+			Z[i] = getStateFromOriQuatAngvel(quatPart, angVelPart)
 
-		# ###############################################################################################
-		# ###############################################################################################
+		###############################################################################################
+		###############################################################################################
 
-		# # 6 X 1
+		# 6 X 1
 		# z_k_bar = np.zeros((6, 1))
-		# # for i in range(2 * n):
-		# # 	z_k_bar = z_k_bar + Z[i]
-		# # z_k_bar = z_k_bar / (2 * n)
-		# z_k_bar = calMean_z_k(Z)
-
-		# # 6 X 6
-		# P_zz = np.zeros((6, 6))
 		# for i in range(2 * n):
-		# 	P_zz = P_zz + np.matmul((Z[i] - z_k_bar), np.transpose((Z[i] - z_k_bar)))
-		# P_zz = P_zz / (2 * n)
+		# 	z_k_bar = z_k_bar + Z[i]
+		# z_k_bar = z_k_bar / (2 * n)
+		z_k_bar = calMean_z_k(Z)
 
-		# # 6 X 6
-		# P_vv = np.add(P_zz, gyroNoiseCovariance_R)
+		# 6 X 6
+		P_zz = np.zeros((6, 6))
+		for i in range(2 * n):
+			P_zz = P_zz + np.matmul((Z[i] - z_k_bar), np.transpose((Z[i] - z_k_bar)))
+		P_zz = P_zz / (2 * n)
 
-		# # 6 X 6
-		# P_xz = np.zeros((6, 6))
-		# for i in range(2 * n):
-		# 	P_xz = P_xz + np.matmul(W_script_prime[i], np.transpose((Z[i] - z_k_bar)))
-		# P_xz = P_xz / (2 * n)
+		# 6 X 6
+		P_vv = np.add(P_zz, measurementNoiseCov_R)
 
-		# ###############################################################################################
-		# ###############################################################################################
+		# 6 X 6
+		P_xz = np.zeros((6, 6))
+		for i in range(2 * n):
+			P_xz = P_xz + np.matmul(W_script_prime[i], np.transpose((Z[i] - z_k_bar)))
+		P_xz = P_xz / (2 * n)
 
-		# # 6 X 6
-		# kalmanGain_K_k = np.matmul(P_xz, np.linalg.inv(P_vv))
+		###############################################################################################
+		###############################################################################################
 
-		# accelQuat = getAccelQuatFromAccelData(accelerometerData[index, 0], accelerometerData[index, 1], accelerometerData[index, 2])
-		# rotVecForAccQuat = getRotationVectorFromQuat(accelQuat)
-		# actualMeasurement = np.asarray([rotVecForAccQuat[0, 0], rotVecForAccQuat[1, 0], rotVecForAccQuat[2, 0], gyroData[index, 0], gyroData[index, 1], gyroData[index, 2]]).reshape(6, 1)
-		# # 6 X 1
-		# innovation_v_k = np.subtract(actualMeasurement, z_k_bar)
+		# 6 X 6
+		kalmanGain_K_k = np.matmul(P_xz, np.linalg.inv(P_vv))
+		# print P_xz
 
-		# updateVal = np.matmul(kalmanGain_K_k, innovation_v_k)
-		# qv_updateVal, w_updateVal = getOriQuatAngvelFromVector(updateVal)
-		# q_Ymean_x_k_bar, w_Ymean_x_k_bar = getOriQuatAngvelFromState(Ymean_x_k_bar)
-		# if abs(getNormOfVector(qv_updateVal) - 0) < 1e-20:
-		# 	quatPart = q_Ymean_x_k_bar
-		# 	print 'in qv_updateVal ' + str(random.random()), qv_updateVal 
-		# else:
-		# 	quatPart = quatMultiply(q_Ymean_x_k_bar, getQuatFromRotationVector(qv_updateVal))
-		# angVelPart = np.add(w_Ymean_x_k_bar, w_updateVal)
-		# # 7 X 1
-		# newStateEstimate_x_k = getStateFromOriQuatAngvel(quatPart, angVelPart)
+		accelQuat = getAccelQuatFromAccelData(accelerometerData[index, 0], accelerometerData[index, 1], accelerometerData[index, 2])
+		rotVecForAccQuat = getRotationVectorFromQuat(accelQuat)
+		actualMeasurement = np.asarray([rotVecForAccQuat[0, 0], rotVecForAccQuat[1, 0], rotVecForAccQuat[2, 0], gyroData[index, 0], gyroData[index, 1], gyroData[index, 2]]).reshape(6, 1)
+		# 6 X 1
+		innovation_v_k = np.subtract(actualMeasurement, z_k_bar)
 
-		# # 6 X 6
-		# newCovariance_P_k = Ycov_P_k_bar + (-1) * (np.matmul(np.matmul(kalmanGain_K_k, P_vv), np.transpose(kalmanGain_K_k)))
+		updateVal = np.matmul(kalmanGain_K_k, innovation_v_k)
+		qv_updateVal, w_updateVal = getOriQuatAngvelFromVector(updateVal)
+		q_Ymean_x_k_bar, w_Ymean_x_k_bar = getOriQuatAngvelFromState(Ymean_x_k_bar)
+		quatPart = quatMultiply(q_Ymean_x_k_bar, getQuatFromRotationVector(qv_updateVal))
+		angVelPart = np.add(w_Ymean_x_k_bar, w_updateVal)
+		# 7 X 1
+		newStateEstimate_x_k = getStateFromOriQuatAngvel(quatPart, angVelPart)
 
-		# ### 
-		# ### Store Values
-		# ###
+		# 6 X 6
+		newCovariance_P_k = Ycov_P_k_bar + (-1) * (np.matmul(np.matmul(kalmanGain_K_k, P_vv), np.transpose(kalmanGain_K_k)))
+		# print newCovariance_P_k
+
+		### 
+		### Store Values
+		###
 
 		result[index] = newStateEstimate_x_k
 		prevStateEstimate_x_km1 = newStateEstimate_x_k
