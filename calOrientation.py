@@ -46,8 +46,8 @@ def rawAngularVelToPhysical(wx, wy, wz):
 	return rx, ry, rz
 
 def applyFilterAndCompare():
-	imuFileName = 'imuRaw4.mat'
-	viconFileName = 'viconRot4.mat'
+	imuFileName = 'imuRaw1.mat'
+	viconFileName = 'viconRot1.mat'
 
 	data = loadFile(os.path.join(IMU_FOLDER, imuFileName))
 	sensorData = data['vals']
@@ -56,6 +56,8 @@ def applyFilterAndCompare():
 
 	gyroData = np.zeros((numInstances, 3))
 	accelData = np.zeros((numInstances, 3))
+
+	# print np.sum(sensorData[:, 0:200], 1)/200
 
 	for i in range(numInstances):
 		wx, wy, wz = rawAngularVelToPhysical(sensorData[4, i], sensorData[5, i], sensorData[3, i])

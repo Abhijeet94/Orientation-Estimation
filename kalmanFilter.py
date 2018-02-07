@@ -24,7 +24,8 @@ def quatMultiply(a, b):
 
 	resFirst = afirst * bfirst - np.dot(asecond, bsecond)
 	resSecond = np.cross(asecond, bsecond) + afirst * bsecond + bfirst * asecond
-	return np.insert(resSecond, 0, resFirst).reshape(4, 1)
+	result = np.insert(resSecond, 0, resFirst).reshape(4, 1) 
+	return result#/quatNorm(result)
 
 def quatConjugate(q):
 	a = np.copy(q).reshape(4, 1)
@@ -237,19 +238,19 @@ def UKF(gyroData, accelerometerData, timestamps):
 	'''
 
 	# 6 X 6 
-	positionCovParam = 10
-	angularVelocityCovParam = 0.1
-	processNoiseCovariance_Q = np.diag(np.concatenate((positionCovParam * np.ones(3), angularVelocityCovParam * np.ones(3))))
+	positionCovParam = 500
+	angularVelocityCovParam = 0.0001
+	Q_processNoiseCovariance = np.diag(np.concatenate((positionCovParam * np.ones(3), angularVelocityCovParam * np.ones(3))))
 
 	# 6 X 6
-	accCovParam = 10
-	gyroCovParam = 0.1
-	measurementNoiseCov_R = np.diag(np.concatenate((accCovParam * np.ones(3), gyroCovParam * np.ones(3))))
+	accCovParam = 500
+	gyroCovParam = 0.0001
+	R_measurementNoiseCov = np.diag(np.concatenate((accCovParam * np.ones(3), gyroCovParam * np.ones(3))))
 
 	# 6 X 6
-	orientationCovParam = 10
-	angVelCovParam = 0.1
-	prevCovariance_P_km1 = np.diag(np.concatenate((orientationCovParam * np.ones(3), angVelCovParam * np.ones(3))))
+	orientationCovParam = 1
+	angVelCovParam = 1
+	P_prevCovariance_P_km1 = np.diag(np.concatenate((orientationCovParam * np.ones(3), angVelCovParam * np.ones(3))))
 
 	# 7 X 1
 	prevStateEstimate_x_km1 = np.asarray([1, 0, 0, 0, 0, 0, 0], dtype=np.float64).reshape(7, 1)
@@ -269,7 +270,7 @@ def UKF(gyroData, accelerometerData, timestamps):
 		# Computing Sigma Points
 		# Cholesky decomposition
 		n = 6
-		S = np.linalg.cholesky(np.add(prevCovariance_P_km1, processNoiseCovariance_Q))
+		S = np.linalg.cholesky(np.add(P_prevCovariance_P_km1, Q_processNoiseCovariance))
 		# print S
 		S_hsplit = np.hsplit(S, n)
 		# pdb.set_trace()
@@ -342,6 +343,7 @@ def UKF(gyroData, accelerometerData, timestamps):
 		for i in range(2 * n):
 			q_Yi, w_Yi = getOriQuatAngvelFromState(Y[i])
 			quatPart = q_lastIter_e[i].reshape(4, 1)
+			# quatPart = quatMultiply(q_Yi, quatInv(q_bar)).reshape(4, 1)
 			angVelPart = w_Yi.reshape(3, 1) - w_bar
 			W_script_prime[i] = getStateFromOriQuatAngvel(getRotationVectorFromQuat(quatPart), angVelPart)
 
@@ -372,7 +374,8 @@ def UKF(gyroData, accelerometerData, timestamps):
 			g = np.asarray([0, 0, 0, 1])
 			q_Yi_inverse = quatInv(q_Yi)
 			gDir = (quatMultiply(quatMultiply(q_Yi_inverse, g), q_Yi))[1:4, 0]
-			gDir = gDir/getNormOfVector(gDir)
+			if getNormOfVector(gDir) > 1e-10:
+				gDir = gDir/getNormOfVector(gDir)
 			angVelPart = w_Yi
 			Z[i] = getStateFromOriQuatAngvel(gDir, angVelPart)
 
@@ -391,9 +394,11 @@ def UKF(gyroData, accelerometerData, timestamps):
 		for i in range(2 * n):
 			P_zz = P_zz + np.matmul((Z[i] - z_k_bar), np.transpose((Z[i] - z_k_bar)))
 		P_zz = P_zz / (2 * n)
+		# if index>1000 and index<1500:
+		# 	print P_zz
 
 		# 6 X 6
-		P_vv = np.add(P_zz, measurementNoiseCov_R)
+		P_vv = np.add(P_zz, R_measurementNoiseCov)
 
 		# 6 X 6
 		P_xz = np.zeros((6, 6))
@@ -410,7 +415,8 @@ def UKF(gyroData, accelerometerData, timestamps):
 
 		# 6 X 1
 		accelMeas = np.asarray([accelerometerData[index, 0], accelerometerData[index, 1], accelerometerData[index, 2]]).reshape(3, 1)
-		accelMeas = accelMeas/getNormOfVector(accelMeas)
+		if getNormOfVector(accelMeas) > 1e-10:
+			accelMeas = accelMeas/getNormOfVector(accelMeas)
 		actualMeasurement = np.asarray([accelMeas[0, 0], accelMeas[1, 0], accelMeas[2, 0], gyroData[index, 0], gyroData[index, 1], gyroData[index, 2]]).reshape(6, 1)
 		innovation_v_k = np.subtract(actualMeasurement, z_k_bar)
 
@@ -423,7 +429,7 @@ def UKF(gyroData, accelerometerData, timestamps):
 		newStateEstimate_x_k = getStateFromOriQuatAngvel(quatPart, angVelPart)
 
 		# 6 X 6
-		newCovariance_P_k = Ycov_P_k_bar + (-1) * (np.matmul(np.matmul(kalmanGain_K_k, P_vv), np.transpose(kalmanGain_K_k)))
+		newCovariance_P_k = Ycov_P_k_bar - np.matmul(np.matmul(kalmanGain_K_k, P_vv), np.transpose(kalmanGain_K_k))
 		# print newCovariance_P_k
 
 		### 
@@ -432,6 +438,6 @@ def UKF(gyroData, accelerometerData, timestamps):
 
 		result[index] = newStateEstimate_x_k
 		prevStateEstimate_x_km1 = newStateEstimate_x_k
-		prevCovariance_P_km1 = newCovariance_P_k
+		P_prevCovariance_P_km1 = newCovariance_P_k
 
 	return result
