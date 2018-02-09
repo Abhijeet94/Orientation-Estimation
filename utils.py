@@ -4,6 +4,7 @@ import math
 import numpy as np
 import transforms3d
 import pdb
+from skimage import img_as_ubyte
 
 from constants import *
 
@@ -95,7 +96,7 @@ def createPanoramaFromViconData():
 	nrows = imgShape[0]
 	ncols = imgShape[1]
 
-	finalImage = np.zeros((1000, 1600, 3))
+	finalImage = np.zeros((1000, 1600, 3), dtype=np.uint8)
 
 	for t in range(numPoints):
 		img = newCamDataImg[:,:,:,t]
@@ -106,7 +107,7 @@ def createPanoramaFromViconData():
 		nic2 = np.zeros((nic1.shape[0], nic1.shape[1], 3))
 		nic2[:,:,0] = 1
 		nic2[:,:,1] = ((nrows/2.0) - nic1[:,:,0]) * ((math.pi/4)/nrows)
-		nic2[:,:,2] = (nic1[:,:,0] - (ncols/2.0)) * ((math.pi/3)/ncols)
+		nic2[:,:,2] = (nic1[:,:,1] - (ncols/2.0)) * ((math.pi/3)/ncols)
 
 		nic3 = np.zeros((nic1.shape[0], nic1.shape[1], 3))
 		nic3[:,:,0] = np.multiply(np.cos(nic2[:,:,1]), np.cos(nic2[:,:,2]))
@@ -124,12 +125,10 @@ def createPanoramaFromViconData():
 		# Global spherical coordinates calculated
 
 		nic6 = np.zeros((nic1.shape[0], nic1.shape[1], 2))
-		nic6[:,:,0] = (nrows/2.0) - (nic5[:,:,1] * nrows / (math.pi/4))
-		nic6[:,:,1] = (ncols/2.0) + (nic5[:,:,2] * ncols / (math.pi/3))
-
-		# pdb.set_trace()
-
+		nic6[:,:,0] = (999/2.0) - (nic5[:,:,1] * 300)
+		nic6[:,:,1] = (1599/2.0) + (nic5[:,:,2] * 450)
 		nic6 = np.rint(nic6).astype(int)
+		
 		finalImage[nic6[:,:,0], nic6[:,:,1], :] = img
 
 		cv2.imshow('Image',finalImage)
