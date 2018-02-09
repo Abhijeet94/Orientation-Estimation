@@ -128,7 +128,8 @@ def createPanoramaFromViconData():
 		nic6[:,:,0] = (999/2.0) - (nic5[:,:,1] * 300)
 		nic6[:,:,1] = (1599/2.0) + (nic5[:,:,2] * 450)
 		nic6 = np.rint(nic6).astype(int)
-		
+
+		img = np.fliplr(img)
 		finalImage[nic6[:,:,0], nic6[:,:,1], :] = img
 
 		cv2.imshow('Image',finalImage)

@@ -103,5 +103,5 @@ if __name__ == "__main__":
 	# viewVicon()
 	# plotEulerAnglesVicon()
 	# checkAccSensorData()
-	createPanoramaFromViconData()
-	# applyFilterAndCompare()
+	# createPanoramaFromViconData()
+	applyFilterAndCompare()
