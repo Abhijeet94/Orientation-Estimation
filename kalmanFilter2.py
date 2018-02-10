@@ -41,7 +41,6 @@ def quatNorm(q):
 def quatInv(q):
 	return quatConjugate(q) / (quatNorm(q) ** 2)
 
-
 def qMul1(A, b):
 	result = np.zeros((4, A.shape[1]))
 	for i in range(A.shape[1]):
@@ -118,13 +117,13 @@ def calMeanQuat(Q):
 def UKF2(gyroData, accelerometerData, timestamps):
 
 	# 6 X 6 
-	positionCovParam = 0.500
-	angularVelocityCovParam = 0.01
+	positionCovParam = 0.05
+	angularVelocityCovParam = 0.05
 	Q_processNoiseCovariance = np.diag(np.concatenate((positionCovParam * np.ones(3), angularVelocityCovParam * np.ones(3))))
 
 	# 6 X 6
-	accCovParam = 0.500
-	gyroCovParam = 0.01
+	accCovParam = 0.7
+	gyroCovParam = 0.05
 	R_measurementNoiseCov = np.diag(np.concatenate((accCovParam * np.ones(3), gyroCovParam * np.ones(3))))
 
 	# 6 X 6

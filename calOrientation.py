@@ -68,8 +68,8 @@ def checkAccSensorData():
 		print accelData[i, :]
 
 def applyFilterAndCompare():
-	imuFileName = 'imuRaw2.mat'
-	viconFileName = 'viconRot2.mat'
+	imuFileName = 'imuRaw7.mat'
+	viconFileName = 'viconRot7.mat'
 
 	data = loadFile(os.path.join(IMU_FOLDER, imuFileName))
 	sensorData = data['vals']
