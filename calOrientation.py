@@ -7,6 +7,7 @@ from constants import *
 from plots import *
 from utils import *
 from kalmanFilter import *
+import kalmanFilter2 as kf2
 import pdb
 
 def seeCameraSample():
@@ -91,7 +92,8 @@ def applyFilterAndCompare():
 		accelData[i, 1] = ay
 		accelData[i, 2] = az
 
-	filterResult = UKF(gyroData, accelData, timestamps)
+	# filterResult = UKF(gyroData, accelData, timestamps)
+	filterResult = kf2.UKF2(gyroData, accelData, timestamps)
 	# filterResult = checkGyroIntegration(gyroData, timestamps)
 	plotGTruthAndPredictions(viconFileName, filterResult, timestamps)
 

@@ -35,6 +35,7 @@ def quatConjugate(q):
 	return a
 
 def quatNorm(q):
+	# print q
 	q = q.reshape(4, 1)
 	return math.sqrt(q[0, 0] ** 2 + q[1, 0] ** 2 + q[2, 0] ** 2 + q[3, 0] ** 2)
 
@@ -166,10 +167,12 @@ def calMeanOfQuat2(Y):
 	qcov = np.zeros((4, 4))
 	for i in range(len(Y)):
 		q = Y[i][0:4, 0].reshape(4, 1)
+		# print q
 		qcov = qcov + np.matmul(q, np.transpose(q))
 	qcov = qcov / (1.0 * len(Y))
 	w, v = np.linalg.eig(qcov)
 	maxEigValIndex = np.argmax(w)
+	# print v[:, maxEigValIndex].reshape(4, 1)
 	return v[:, maxEigValIndex].reshape(4, 1)
 
 def testQuatAveraging():
@@ -212,7 +215,8 @@ def calMean_z_k(Z):
 		ZZ_w_bar = ZZ_w_bar + w_ZZ_i.reshape(3, 1)
 	ZZ_w_bar = ZZ_w_bar / len(Z)
 
-	ZZ_q_bar, throwaway = calMeanOfQuat(ZZ)
+	# ZZ_q_bar, throwaway = calMeanOfQuat(ZZ)
+	ZZ_q_bar = calMeanOfQuat2(ZZ)
 	return getStateFromOriQuatAngvel(getRotationVectorFromQuat(ZZ_q_bar), ZZ_w_bar)
 
 def normalizeQuatInStateVector(X):
@@ -247,12 +251,12 @@ def UKF(gyroData, accelerometerData, timestamps):
 	'''
 
 	# 6 X 6 
-	positionCovParam = 0.500
+	positionCovParam = 500
 	angularVelocityCovParam = 0.01
 	Q_processNoiseCovariance = np.diag(np.concatenate((positionCovParam * np.ones(3), angularVelocityCovParam * np.ones(3))))
 
 	# 6 X 6
-	accCovParam = 0.500
+	accCovParam = 0.0500
 	gyroCovParam = 0.01
 	R_measurementNoiseCov = np.diag(np.concatenate((accCovParam * np.ones(3), gyroCovParam * np.ones(3))))
 
@@ -327,6 +331,7 @@ def UKF(gyroData, accelerometerData, timestamps):
 		# q_bar, q_lastIter_e = calMeanOfQuat(Y, q_prevState)
 		q_bar = calMeanOfQuat2(Y)
 		q_bar = q_bar / quatNorm(q_bar)
+		# print 'qbar - ' + str(q_bar)
 		# 7 X 1
 		Ymean_x_k_bar = getStateFromOriQuatAngvel(q_bar, w_bar)
 		# print "Ymean_x_k_bar" + str(Ymean_x_k_bar)
@@ -375,6 +380,8 @@ def UKF(gyroData, accelerometerData, timestamps):
 			# 	gDir = gDir/getNormOfVector(gDir)
 			angVelPart = w_Yi
 			Z[i] = getStateFromOriQuatAngvel(gDir, angVelPart)
+			# print index
+			# print Z[i][2]
 			# pdb.set_trace()
 
 		###############################################################################################
@@ -413,12 +420,14 @@ def UKF(gyroData, accelerometerData, timestamps):
 
 		# 6 X 1
 		accelMeas = np.asarray([accelerometerData[index, 0], accelerometerData[index, 1], accelerometerData[index, 2]]).reshape(3, 1)
+		# print getNormOfVector(accelMeas)
 		actualMeasurement = np.asarray([accelMeas[0, 0], accelMeas[1, 0], accelMeas[2, 0], gyroData[index, 0], gyroData[index, 1], gyroData[index, 2]]).reshape(6, 1)
 		innovation_v_k = np.subtract(actualMeasurement, z_k_bar)
+		# print actualMeasurement, z_k_bar
+		# print innovation_v_k
 		# innovation_v_k = remAccUpdateIfWrongAccel(accelMeas, innovation_v_k)
-		# innovation_v_k[3, 0] = 0
-		# innovation_v_k[4, 0] = 0
-		# innovation_v_k[5, 0] = 0
+		# innovation_v_k[3:6, 0] = 0
+		# innovation_v_k[0:3, 0] = 0
 
 		updateVal = np.matmul(kalmanGain_K_k, innovation_v_k)
 		qv_updateVal, w_updateVal = getOriQuatAngvelFromVector(updateVal)
@@ -439,5 +448,7 @@ def UKF(gyroData, accelerometerData, timestamps):
 		result[index] = newStateEstimate_x_k
 		prevStateEstimate_x_km1 = newStateEstimate_x_k
 		P_prevCovariance_P_km1 = newCovariance_P_k
+
+		# print np.linalg.norm(P_prevCovariance_P_km1)
 
 	return result
