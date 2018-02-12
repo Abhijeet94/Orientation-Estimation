@@ -68,8 +68,9 @@ def checkAccSensorData():
 		print accelData[i, :]
 
 def applyFilterAndCompare():
-	imuFileName = 'imuRaw7.mat'
-	viconFileName = 'viconRot7.mat'
+	imuFileName = 'imuRaw9.mat'
+	viconFileName = 'viconRot9.mat'
+	camFileName = 'cam9.mat'
 
 	data = loadFile(os.path.join(IMU_FOLDER, imuFileName))
 	sensorData = data['vals']
@@ -96,6 +97,7 @@ def applyFilterAndCompare():
 	filterResult = kf2.UKF2(gyroData, accelData, timestamps)
 	# filterResult = checkGyroIntegration(gyroData, timestamps)
 	plotGTruthAndPredictions(viconFileName, filterResult, timestamps)
+	# createPanoramaFromPredictions(timestamps, filterResult, camFileName)
 
 
 if __name__ == "__main__":

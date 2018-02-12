@@ -12,6 +12,9 @@ from utils import *
 def quatAdd(a, b):
 	return np.add(a, b)
 
+def quatNorm(q):
+	return np.linalg.norm(q)
+
 def quatMultiply(a, b):
 	a = a.reshape(4, 1)
 	b = b.reshape(4, 1)
@@ -25,7 +28,7 @@ def quatMultiply(a, b):
 	resFirst = afirst * bfirst - np.dot(asecond, bsecond)
 	resSecond = np.cross(asecond, bsecond) + afirst * bsecond + bfirst * asecond
 	result = np.insert(resSecond, 0, resFirst).reshape(4, 1) 
-	return result#/quatNorm(result)
+	return result/quatNorm(result)
 
 def quatConjugate(q):
 	a = np.copy(q).reshape(4, 1)
@@ -33,10 +36,6 @@ def quatConjugate(q):
 	a[2, 0] = -1 * a[2, 0]
 	a[3, 0] = -1 * a[3, 0]
 	return a
-
-def quatNorm(q):
-	# print q
-	return np.linalg.norm(q)
 
 def quatInv(q):
 	return quatConjugate(q) / (quatNorm(q) ** 2)
@@ -127,7 +126,7 @@ def UKF2(gyroData, accelerometerData, timestamps):
 	R_measurementNoiseCov = np.diag(np.concatenate((accCovParam * np.ones(3), gyroCovParam * np.ones(3))))
 
 	# 6 X 6
-	orientationCovParam = 0.1
+	orientationCovParam = 0.0001
 	angVelCovParam = 0.01
 	P_prevCovariance_P_km1 = np.diag(np.concatenate((orientationCovParam * np.ones(3), angVelCovParam * np.ones(3))))
 
@@ -177,6 +176,8 @@ def UKF2(gyroData, accelerometerData, timestamps):
 
 		actualMeasurement = np.asarray([accelerometerData[index, 0], accelerometerData[index, 1], accelerometerData[index, 2], gyroData[index, 0], gyroData[index, 1], gyroData[index, 2]]).reshape(6, 1)
 		innovation_v_k = np.subtract(actualMeasurement, z_k_bar)
+		if np.linalg.norm(accelerometerData[index, :]) < 0.9 or np.linalg.norm(accelerometerData[index, :]) > 1.1:
+			innovation_v_k[0:3, 0] = 0
 		updateVal = np.matmul(kalmanGain_K_k, innovation_v_k)
 
 		newStateEstimate_x_k = np.zeros((7, 1))
