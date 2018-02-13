@@ -153,3 +153,33 @@ def plotGTruthAndPredictions(viconFile, predictions, predTimestamps):
 	plt.ylabel('yaw')
 
 	plt.show()
+
+def plotPredictions(predictions, predTimestamps):
+	numInstancesPred = predTimestamps.shape[1]
+	pred_roll_pitch_yaw = np.zeros((3, numInstancesPred))
+	for i in range(numInstancesPred):
+		pred = [predictions[i][0], predictions[i][1], predictions[i][2], predictions[i][3]]
+		r, p, y = transforms3d.euler.quat2euler(pred, 'sxyz')
+		pred_roll_pitch_yaw[0, i] = r
+		pred_roll_pitch_yaw[1, i] = p
+		pred_roll_pitch_yaw[2, i] = y
+
+	numPoints = numInstancesPred
+	x_axis = predTimestamps.reshape(numPoints, 1)
+
+	plt.subplot(311)
+	plt.plot(x_axis, pred_roll_pitch_yaw[0, :].reshape(numPoints, 1), 'r-', label='Predicted')
+	plt.legend()
+	plt.ylabel('roll')
+
+	plt.subplot(312)
+	plt.plot(x_axis, pred_roll_pitch_yaw[1, :].reshape(numPoints, 1), 'g-', label='Predicted')
+	plt.legend()
+	plt.ylabel('pitch')
+
+	plt.subplot(313)
+	plt.plot(x_axis, pred_roll_pitch_yaw[2, :].reshape(numPoints, 1), 'b-', label='Predicted')
+	plt.legend()
+	plt.ylabel('yaw')
+
+	plt.show()

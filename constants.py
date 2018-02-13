@@ -18,6 +18,6 @@ VICON_FOLDER = os.path.join(DATA_FOLDER,'vicon')
 # R_measurementNoiseCov = np.diag(np.concatenate((accCovParam * np.ones(3), gyroCovParam * np.ones(3))))
 
 # # 6 X 6
-# orientationCovParam = 0.0001
-# angVelCovParam = 0.01
+# orientationCovParam = 0.1, 0.0001
+# angVelCovParam = 0.01 0.01
 # P_prevCovariance_P_km1 = np.diag(np.concatenate((orientationCovParam * np.ones(3), angVelCovParam * np.ones(3))))

@@ -1,0 +1,3 @@
+1) The data is assumed to be kept in DATA_FOLDER defined in constants.py.
+2) Run calOrientation.py to run the algorithm and plot the predicted Euler angles against the ground truth of Vicon.
+3) Making panorama is achieved through one of the following functions - createPanoramaFromViconData(), createPanoramaFromPredictions(timestamps, filterResult, camFileName). They simply need to be uncommented in the code if you wish to create the panorama.

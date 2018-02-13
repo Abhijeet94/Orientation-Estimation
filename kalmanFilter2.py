@@ -91,7 +91,7 @@ def getQuatRotFromAngularVelocity(w, delta_t):
 	# Assuming w is 3 X 1
 	# Returns a 4 X 1 numpy array representing a Quaternion
 	w = w.reshape(3, 1)
-	rotNorm = math.sqrt(w[0, 0]**2 + w[1, 0]**2 + w[2, 0]**2)
+	rotNorm = np.linalg.norm(w)#math.sqrt(w[0, 0]**2 + w[1, 0]**2 + w[2, 0]**2)
 
 	if rotNorm < 1e-20:
 		return np.asarray([1, 0, 0, 0]).reshape(4, 1)
@@ -109,8 +109,42 @@ def calMeanQuat(Q):
 
 	w, v = np.linalg.eig(qcov)
 	maxEigValIndex = np.argmax(w)
-	# print v[:, maxEigValIndex].reshape(4, 1)
 	return v[:, maxEigValIndex].reshape(4, 1)
+
+def calMeanQuat2(Q, startValue = None):
+
+	if startValue is None:
+		startValue = np.asarray([0, 0, 1, 0]).reshape(4, 1)
+
+	prevQBar = startValue
+	listSize = Q.shape[1]
+	e_quat = [None] * listSize
+	e_vec = [None] * listSize
+	numIterations = 0
+
+	while True:
+		e_mean = np.zeros((3, 1))
+		for i in range(listSize):
+			if np.linalg.norm(prevQBar) < 1e-30:
+				e_quat[i] = Q[:, i]
+			else:
+				e_quat[i] = quatMultiply(Q[:, i], quatInv(prevQBar))
+			e_vec[i] = quat2rotv(np.asarray(e_quat[i]))
+			e_mean = e_mean + e_vec[i]
+		e_mean = e_mean / (listSize * 1.0)
+
+		if(np.linalg.norm(e_mean) < 1e-5):
+			break
+
+		e_mean_quat = rotv2quat(e_mean)
+		e_mean_quat = e_mean_quat / quatNorm(e_mean_quat)
+		prevQBar = quatMultiply(e_mean_quat, prevQBar)
+
+		numIterations = numIterations + 1
+		if numIterations > 50:
+			break
+	# print numIterations
+	return prevQBar
 
 
 def UKF(gyroData, accelerometerData, timestamps):
@@ -126,7 +160,7 @@ def UKF(gyroData, accelerometerData, timestamps):
 	R_measurementNoiseCov = np.diag(np.concatenate((accCovParam * np.ones(3), gyroCovParam * np.ones(3))))
 
 	# 6 X 6
-	orientationCovParam = 0.0001
+	orientationCovParam = 0.1
 	angVelCovParam = 0.01
 	P_prevCovariance_P_km1 = np.diag(np.concatenate((orientationCovParam * np.ones(3), angVelCovParam * np.ones(3))))
 
@@ -153,6 +187,7 @@ def UKF(gyroData, accelerometerData, timestamps):
 
 		w_bar = np.mean(Y[4:7, :], axis=1)
 		q_bar = calMeanQuat(Y[0:4, :])
+		# q_bar = calMeanQuat2(Y[0:4, :], prevStateEstimate_x_km1[0:4, 0])
 
 		W_script_prime = np.zeros((6, 12))
 		W_script_prime[3:6, :] = Y[4:7, :] - w_bar.reshape(3, 1)
