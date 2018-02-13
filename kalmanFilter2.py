@@ -113,7 +113,7 @@ def calMeanQuat(Q):
 	return v[:, maxEigValIndex].reshape(4, 1)
 
 
-def UKF2(gyroData, accelerometerData, timestamps):
+def UKF(gyroData, accelerometerData, timestamps):
 
 	# 6 X 6 
 	positionCovParam = 0.05

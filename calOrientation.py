@@ -94,7 +94,7 @@ def applyFilterAndCompare():
 		accelData[i, 2] = az
 
 	# filterResult = UKF(gyroData, accelData, timestamps)
-	filterResult = kf2.UKF2(gyroData, accelData, timestamps)
+	filterResult = kf2.UKF(gyroData, accelData, timestamps)
 	# filterResult = checkGyroIntegration(gyroData, timestamps)
 	plotGTruthAndPredictions(viconFileName, filterResult, timestamps)
 	# createPanoramaFromPredictions(timestamps, filterResult, camFileName)

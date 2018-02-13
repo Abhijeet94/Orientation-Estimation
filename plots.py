@@ -135,15 +135,21 @@ def plotGTruthAndPredictions(viconFile, predictions, predTimestamps):
 	pred_roll_pitch_yaw = pred_roll_pitch_yaw[:, pt].reshape(3, numPoints)
 
 	plt.subplot(311)
-	plt.plot(x_axis, gt_roll_pitch_yaw[0, :].reshape(numPoints, 1), 'k-')
-	plt.plot(x_axis, pred_roll_pitch_yaw[0, :].reshape(numPoints, 1), 'r-')
+	plt.plot(x_axis, gt_roll_pitch_yaw[0, :].reshape(numPoints, 1), 'k-', label='Vicon')
+	plt.plot(x_axis, pred_roll_pitch_yaw[0, :].reshape(numPoints, 1), 'r-', label='Predicted')
+	plt.legend()
+	plt.ylabel('roll')
 
 	plt.subplot(312)
-	plt.plot(x_axis, gt_roll_pitch_yaw[1, :].reshape(numPoints, 1), 'k-')
-	plt.plot(x_axis, pred_roll_pitch_yaw[1, :].reshape(numPoints, 1), 'g-')
+	plt.plot(x_axis, gt_roll_pitch_yaw[1, :].reshape(numPoints, 1), 'k-', label='Vicon')
+	plt.plot(x_axis, pred_roll_pitch_yaw[1, :].reshape(numPoints, 1), 'g-', label='Predicted')
+	plt.legend()
+	plt.ylabel('pitch')
 
 	plt.subplot(313)
-	plt.plot(x_axis, gt_roll_pitch_yaw[2, :].reshape(numPoints, 1), 'k-')
-	plt.plot(x_axis, pred_roll_pitch_yaw[2, :].reshape(numPoints, 1), 'b-')
+	plt.plot(x_axis, gt_roll_pitch_yaw[2, :].reshape(numPoints, 1), 'k-', label='Vicon')
+	plt.plot(x_axis, pred_roll_pitch_yaw[2, :].reshape(numPoints, 1), 'b-', label='Predicted')
+	plt.legend()
+	plt.ylabel('yaw')
 
 	plt.show()
